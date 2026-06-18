@@ -11,7 +11,7 @@ export default async function HomePage() {
 
   return (
     <>
-      <section className="relative overflow-hidden border-b border-border/60 bg-gradient-to-br from-background via-secondary/30 to-accent/40">
+      <section className="relative overflow-hidden border-b border-border/60 bg-gradient-to-br from-background via-secondary/20 to-primary/10">
         <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8 lg:py-28">
           <div className="max-w-2xl">
             <p className="mb-4 text-sm font-medium uppercase tracking-widest text-primary">
