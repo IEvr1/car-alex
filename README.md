@@ -1,36 +1,95 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Car Alex — Website Πώλησης Αυτοκινήτων
 
-## Getting Started
+Σύγχρονο Next.js site για εμφάνιση και διαχείριση αυτοκινήτων προς πώληση, με αποθήκευση φωτογραφιών στο Vercel Blob.
 
-First, run the development server:
+## Τεχνολογίες
+
+- **Next.js 16** (App Router) + TypeScript
+- **Tailwind CSS** + shadcn/ui
+- **Neon Postgres** + Drizzle ORM
+- **Vercel Blob** για εικόνες
+- **iron-session** για admin authentication
+
+## Γρήγορη εκκίνηση
+
+### 1. Εγκατάσταση
+
+```bash
+npm install
+```
+
+### 2. Environment variables
+
+Αντιγράψτε το `.env.example` σε `.env.local` και συμπληρώστε τις τιμές:
+
+```bash
+cp .env.example .env.local
+```
+
+| Μεταβλητή | Περιγραφή |
+|-----------|-----------|
+| `DATABASE_URL` | Connection string από Neon Postgres |
+| `BLOB_READ_WRITE_TOKEN` | Token από Vercel Blob store |
+| `ADMIN_PASSWORD` | Κωδικός για `/admin/login` |
+| `SESSION_SECRET` | Τυχαίο string ≥32 χαρακτήρες |
+| `NEXT_PUBLIC_CONTACT_PHONE` | Τηλέφωνο επικοινωνίας |
+| `NEXT_PUBLIC_CONTACT_EMAIL` | Email επικοινωνίας |
+
+### 3. Βάση δεδομένων
+
+```bash
+npm run db:push
+npm run db:seed   # προαιρετικά — 3 demo αυτοκίνητα
+```
+
+### 4. Development
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- **Δημόσιο site:** http://localhost:3000
+- **Admin panel:** http://localhost:3000/admin/login
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Δομή routes
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Route | Περιγραφή |
+|-------|-----------|
+| `/` | Αρχική — grid αυτοκινήτων |
+| `/cars/[id]` | Λεπτομέρειες + photo gallery |
+| `/admin/login` | Σύνδεση admin |
+| `/admin` | Dashboard διαχείρισης |
+| `/admin/cars/new` | Νέο listing |
+| `/admin/cars/[id]/edit` | Επεξεργασία listing |
 
-## Learn More
+## Λογική εικόνων
 
-To learn more about Next.js, take a look at the following resources:
+### Upload
+1. Admin επιλέγει εικόνες στη φόρμα (JPEG/PNG/WebP, max 5MB)
+2. Κάθε αρχείο στέλνεται στο `POST /api/upload`
+3. Το API αποθηκεύει στο Vercel Blob (`cars/{carId}/{timestamp}-{filename}`)
+4. Τα URLs αποθηκεύονται στη βάση
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Εμφάνιση
+Οι public URLs του Blob σερβίρονται μέσω CDN και `next/image`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Διαγραφή
+- Διαγραφή αυτοκινήτου → διαγραφή όλων των εικόνων από Blob
+- Αφαίρεση εικόνας στην επεξεργασία → `del()` στο Blob
 
-## Deploy on Vercel
+## Deploy στο Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. Push το repo και συνδέστε με Vercel
+2. `vercel integration add neon` — provisioning `DATABASE_URL`
+3. Δημιουργήστε Blob store → `BLOB_READ_WRITE_TOKEN`
+4. Ορίστε `ADMIN_PASSWORD` και `SESSION_SECRET`
+5. Τρέξτε `npm run db:push` (τοπικά ή μέσω CI)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Scripts
+
+```bash
+npm run dev        # Development server
+npm run build      # Production build
+npm run db:push    # Sync schema στη βάση
+npm run db:seed    # Demo δεδομένα
+```
