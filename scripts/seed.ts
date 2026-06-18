@@ -1,5 +1,30 @@
-import { saveCarMetadata } from "../lib/blob";
+import { saveCarMetadata, uploadCarImage } from "../lib/blob";
 import type { Car } from "../lib/types";
+
+const DEMO_IMAGE_SOURCES = [
+  {
+    url: "https://images.unsplash.com/photo-1555215695-3004980ad54e?w=1200&q=80",
+    filename: "bmw-320d.jpg",
+  },
+  {
+    url: "https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=1200&q=80",
+    filename: "mercedes-c200.jpg",
+  },
+  {
+    url: "https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=1200&q=80",
+    filename: "toyota-yaris.jpg",
+  },
+] as const;
+
+async function fetchImageAsFile(url: string, filename: string) {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch image: ${url}`);
+  }
+
+  const blob = await response.blob();
+  return new File([blob], filename, { type: blob.type || "image/jpeg" });
+}
 
 async function seed() {
   if (!process.env.BLOB_READ_WRITE_TOKEN) {
@@ -8,7 +33,7 @@ async function seed() {
 
   const now = new Date().toISOString();
 
-  const demoCars: Car[] = [
+  const demoCars: Omit<Car, "images">[] = [
     {
       id: crypto.randomUUID(),
       title: "BMW 320d xDrive M Sport",
@@ -19,12 +44,6 @@ async function seed() {
       transmission: "Αυτόματο",
       description:
         "Εξαιρετική κατάσταση, πλήρες service history, M Sport πακέτο, leather interior, navigation, parking sensors.",
-      images: [
-        {
-          url: "https://images.unsplash.com/photo-1555215695-3004980ad54e?w=1200&q=80",
-          pathname: "external/bmw-320d",
-        },
-      ],
       featured: true,
       createdAt: new Date(now),
       updatedAt: new Date(now),
@@ -39,12 +58,6 @@ async function seed() {
       transmission: "Αυτόματο",
       description:
         "AMG Line, LED headlights, dual zone A/C, keyless entry, cruise control. Άριστη συντήρηση.",
-      images: [
-        {
-          url: "https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=1200&q=80",
-          pathname: "external/mercedes-c200",
-        },
-      ],
       featured: true,
       createdAt: new Date(now),
       updatedAt: new Date(now),
@@ -59,24 +72,28 @@ async function seed() {
       transmission: "Αυτόματο",
       description:
         "Οικονομικό hybrid, ιδανικό για πόλη. Εγγύηση Toyota, ένας ιδιοκτήτης, ατρακάριστο.",
-      images: [
-        {
-          url: "https://images.unsplash.com/photo-1623869675781-52e3a7a1f4c5?w=1200&q=80",
-          pathname: "external/toyota-yaris",
-        },
-      ],
       featured: false,
       createdAt: new Date(now),
       updatedAt: new Date(now),
     },
   ];
 
-  for (const car of demoCars) {
+  for (let index = 0; index < demoCars.length; index++) {
+    const carData = demoCars[index];
+    const source = DEMO_IMAGE_SOURCES[index];
+    const file = await fetchImageAsFile(source.url, source.filename);
+    const uploaded = await uploadCarImage(carData.id, file);
+
+    const car: Car = {
+      ...carData,
+      images: [{ url: uploaded.url, pathname: uploaded.pathname }],
+    };
+
     await saveCarMetadata(car);
     console.log(`Seeded: ${car.title} (${car.id})`);
   }
 
-  console.log(`Seeded ${demoCars.length} demo cars to Vercel Blob.`);
+  console.log(`Seeded ${demoCars.length} demo cars with photos to Vercel Blob.`);
 }
 
 seed().catch((error) => {
