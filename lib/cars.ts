@@ -1,61 +1,83 @@
-import { desc, eq } from "drizzle-orm";
-import { getDb } from "./db";
-import { cars } from "./schema";
-import type { CarFormData } from "./types";
+import {
+  deleteCarFolder,
+  fetchCarMetadata,
+  getCarMetadataById,
+  listCarMetadataBlobs,
+  saveCarMetadata,
+} from "./blob";
+import type { Car, CarFormData } from "./types";
 
 export async function getAllCars() {
-  return getDb().select().from(cars).orderBy(desc(cars.createdAt));
+  const metadataBlobs = await listCarMetadataBlobs();
+  const cars = await Promise.all(
+    metadataBlobs.map((blob) => fetchCarMetadata(blob.url))
+  );
+
+  return cars
+    .filter((car): car is Car => car !== null)
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 }
 
 export async function getCarById(id: string) {
-  const [car] = await getDb().select().from(cars).where(eq(cars.id, id)).limit(1);
-  return car ?? null;
+  return getCarMetadataById(id);
 }
 
 export async function createCar(data: CarFormData & { id?: string }) {
-  const [car] = await getDb()
-    .insert(cars)
-    .values({
-      id: data.id,
-      title: data.title,
-      price: data.price,
-      year: data.year ?? null,
-      mileage: data.mileage ?? null,
-      fuel: data.fuel ?? null,
-      transmission: data.transmission ?? null,
-      description: data.description ?? null,
-      images: data.images,
-      featured: data.featured ?? false,
-    })
-    .returning();
+  const id = data.id ?? crypto.randomUUID();
+  const now = new Date();
 
+  const existing = await getCarById(id);
+  if (existing) {
+    throw new Error("Το αυτοκίνητο υπάρχει ήδη");
+  }
+
+  const car: Car = {
+    id,
+    title: data.title,
+    price: data.price,
+    year: data.year ?? null,
+    mileage: data.mileage ?? null,
+    fuel: data.fuel ?? null,
+    transmission: data.transmission ?? null,
+    description: data.description ?? null,
+    images: data.images,
+    featured: data.featured ?? false,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  await saveCarMetadata(car);
   return car;
 }
 
 export async function updateCar(id: string, data: CarFormData) {
-  const [car] = await getDb()
-    .update(cars)
-    .set({
-      title: data.title,
-      price: data.price,
-      year: data.year ?? null,
-      mileage: data.mileage ?? null,
-      fuel: data.fuel ?? null,
-      transmission: data.transmission ?? null,
-      description: data.description ?? null,
-      images: data.images,
-      featured: data.featured ?? false,
-      updatedAt: new Date(),
-    })
-    .where(eq(cars.id, id))
-    .returning();
+  const existing = await getCarById(id);
+  if (!existing) return null;
 
-  return car ?? null;
+  const car: Car = {
+    ...existing,
+    title: data.title,
+    price: data.price,
+    year: data.year ?? null,
+    mileage: data.mileage ?? null,
+    fuel: data.fuel ?? null,
+    transmission: data.transmission ?? null,
+    description: data.description ?? null,
+    images: data.images,
+    featured: data.featured ?? false,
+    updatedAt: new Date(),
+  };
+
+  await saveCarMetadata(car);
+  return car;
 }
 
 export async function deleteCar(id: string) {
-  const [car] = await getDb().delete(cars).where(eq(cars.id, id)).returning();
-  return car ?? null;
+  const existing = await getCarById(id);
+  if (!existing) return null;
+
+  await deleteCarFolder(id);
+  return existing;
 }
 
 export function formatPrice(price: number) {

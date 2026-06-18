@@ -1,18 +1,16 @@
-import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
-import * as schema from "../lib/schema";
+import { saveCarMetadata } from "../lib/blob";
+import type { Car } from "../lib/types";
 
 async function seed() {
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) {
-    throw new Error("DATABASE_URL is not set");
+  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    throw new Error("BLOB_READ_WRITE_TOKEN is not set");
   }
 
-  const sql = neon(databaseUrl);
-  const db = drizzle(sql, { schema });
+  const now = new Date().toISOString();
 
-  const demoCars = [
+  const demoCars: Car[] = [
     {
+      id: crypto.randomUUID(),
       title: "BMW 320d xDrive M Sport",
       price: 28900,
       year: 2019,
@@ -24,12 +22,15 @@ async function seed() {
       images: [
         {
           url: "https://images.unsplash.com/photo-1555215695-3004980ad54e?w=1200&q=80",
-          pathname: "demo/bmw-320d",
+          pathname: "external/bmw-320d",
         },
       ],
       featured: true,
+      createdAt: new Date(now),
+      updatedAt: new Date(now),
     },
     {
+      id: crypto.randomUUID(),
       title: "Mercedes-Benz C 200 AMG Line",
       price: 32500,
       year: 2020,
@@ -41,12 +42,15 @@ async function seed() {
       images: [
         {
           url: "https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?w=1200&q=80",
-          pathname: "demo/mercedes-c200",
+          pathname: "external/mercedes-c200",
         },
       ],
       featured: true,
+      createdAt: new Date(now),
+      updatedAt: new Date(now),
     },
     {
+      id: crypto.randomUUID(),
       title: "Toyota Yaris Hybrid",
       price: 15900,
       year: 2021,
@@ -58,18 +62,21 @@ async function seed() {
       images: [
         {
           url: "https://images.unsplash.com/photo-1623869675781-52e3a7a1f4c5?w=1200&q=80",
-          pathname: "demo/toyota-yaris",
+          pathname: "external/toyota-yaris",
         },
       ],
       featured: false,
+      createdAt: new Date(now),
+      updatedAt: new Date(now),
     },
   ];
 
   for (const car of demoCars) {
-    await db.insert(schema.cars).values(car);
+    await saveCarMetadata(car);
+    console.log(`Seeded: ${car.title} (${car.id})`);
   }
 
-  console.log(`Seeded ${demoCars.length} demo cars.`);
+  console.log(`Seeded ${demoCars.length} demo cars to Vercel Blob.`);
 }
 
 seed().catch((error) => {

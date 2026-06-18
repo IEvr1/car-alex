@@ -114,15 +114,10 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: "id απαιτείται" }, { status: 400 });
   }
 
-  const existing = await getCarById(id);
-  if (!existing) {
+  const deleted = await deleteCar(id);
+  if (!deleted) {
     return NextResponse.json({ error: "Δεν βρέθηκε αυτοκίνητο" }, { status: 404 });
   }
 
-  if (existing.images.length > 0) {
-    await deleteCarImages(existing.images.map((img) => img.pathname));
-  }
-
-  await deleteCar(id);
   return NextResponse.json({ success: true });
 }
